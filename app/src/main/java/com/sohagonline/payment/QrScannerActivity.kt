@@ -23,6 +23,8 @@ class QrScannerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Allow screenshots and screen recording
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         setContentView(R.layout.activity_qr_scanner)
 
         barcodeScannerView = findViewById(R.id.barcodeScannerView)
