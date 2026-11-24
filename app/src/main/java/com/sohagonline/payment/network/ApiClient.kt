@@ -4,10 +4,12 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
 import com.sohagonline.payment.data.AppPrefs
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.StringReader
 import java.util.concurrent.TimeUnit
 
 class ApiClient private constructor(private val context: Context) {
@@ -39,6 +41,39 @@ class ApiClient private constructor(private val context: Context) {
     )
 
     /**
+     * Resilient JSON response parser that extracts the valid JSON object
+     * even if Debugbar scripts, HTML or whitespaces are appended by the server.
+     */
+    private fun parseJsonResponse(rawBody: String): Pair<String, String> {
+        return try {
+            val trimmed = rawBody.trim()
+            val startIndex = trimmed.indexOf('{')
+            val endIndex = trimmed.lastIndexOf('}')
+            val cleanJson = if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+                trimmed.substring(startIndex, endIndex + 1)
+            } else {
+                trimmed
+            }
+
+            val reader = JsonReader(StringReader(cleanJson)).apply {
+                isLenient = true
+            }
+            val element = JsonParser.parseReader(reader)
+            if (element.isJsonObject) {
+                val json = element.asJsonObject
+                val status = json.get("status")?.asString ?: "0"
+                val msg = json.get("message")?.asString ?: ""
+                Pair(status, msg)
+            } else {
+                Pair("0", cleanJson)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "parseJsonResponse error: ${e.message}", e)
+            Pair("0", rawBody)
+        }
+    }
+
+    /**
      * Connect and authenticate device with the server.
      * Endpoint: /api/device-connect
      */
@@ -64,10 +99,7 @@ class ApiClient private constructor(private val context: Context) {
                 Log.d(TAG, "deviceConnect Response: $body")
 
                 if (response.isSuccessful && body.isNotBlank()) {
-                    val json = JsonParser.parseString(body).asJsonObject
-                    val status = json.get("status")?.asString ?: "0"
-                    val msg = json.get("message")?.asString ?: ""
-
+                    val (status, msg) = parseJsonResponse(body)
                     ApiResponse(
                         isSuccess = (status == "1"),
                         statusCode = status,
@@ -116,10 +148,7 @@ class ApiClient private constructor(private val context: Context) {
                 Log.d(TAG, "addMessage Response for $address: $body")
 
                 if (response.isSuccessful && body.isNotBlank()) {
-                    val json = JsonParser.parseString(body).asJsonObject
-                    val status = json.get("status")?.asString ?: "0"
-                    val msg = json.get("message")?.asString ?: ""
-
+                    val (status, msg) = parseJsonResponse(body)
                     // Status 1 = Data inserted successfully or Already exists
                     val isSuccess = (status == "1")
                     ApiResponse(isSuccess, status, msg)
