@@ -3,7 +3,7 @@
     <string name="service_name">Sohag Online Payment Service</string>
     <string name="notification_channel_name">Payment Service</string>
     <string name="notification_channel_desc">Keeps payment SMS listener running in background</string>
-    <string name="service_active_title">⚡ সোয়েল/সোহাগ পেমেন্ট গেটওয়ে সক্রিয়</string>
+    <string name="service_active_title">⚡ সোহাগ অনলাইন পেমেন্ট গেটওয়ে সক্রিয়</string>
     <string name="service_active_desc">এসএমএস পর্যবেক্ষণ ও অটো সার্ভার সিঙ্ক চালু আছে</string>
     <string name="status_connected">সক্রিয় • অটো রিডিং চালু</string>
     <string name="status_disconnected">ডিসকানেক্টেড • সেটআপ করুন</string>

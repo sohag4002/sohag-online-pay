@@ -85,7 +85,7 @@ class PaymentForegroundService : Service() {
     }
 
     private fun startInForeground() {
-        val notification = buildNotification("⚡ সোয়েল/সোহাগ পেমেন্ট গেটওয়ে সক্রিয় আছে", "এসএমএস পর্যবেক্ষণ ও অটো সার্ভার সিঙ্ক চালু")
+        val notification = buildNotification("⚡ সোহাগ অনলাইন পেমেন্ট গেটওয়ে সক্রিয় আছে", "এসএমএস পর্যবেক্ষণ ও অটো সার্ভার সিঙ্ক চালু")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -142,7 +142,7 @@ class PaymentForegroundService : Service() {
     private fun updateNotification() {
         try {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            val notification = buildNotification("⚡ সোয়েল/সোহাগ পেমেন্ট গেটওয়ে সক্রিয় আছে", "")
+            val notification = buildNotification("⚡ সোহাগ অনলাইন পেমেন্ট গেটওয়ে সক্রিয় আছে", "")
             manager?.notify(NOTIFICATION_ID, notification)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating notification: ${e.message}")
