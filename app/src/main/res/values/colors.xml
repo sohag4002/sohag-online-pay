@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colors from Sohag Online Logo -->
+    <color name="primary_navy">#0B2545</color>
+    <color name="primary_navy_dark">#061528</color>
+    <color name="primary_navy_light">#13315C</color>
+    <color name="accent_red">#D8232A</color>
+    <color name="accent_red_dark">#B31B21</color>
+    <color name="accent_red_light">#FF4D54</color>
+
+    <!-- Neutral & Surfaces -->
+    <color name="bg_light">#F8FAFC</color>
+    <color name="surface_white">#FFFFFF</color>
+    <color name="card_stroke">#E2E8F0</color>
+    <color name="divider">#F1F5F9</color>
+
+    <!-- Typography -->
+    <color name="text_title">#0F172A</color>
+    <color name="text_body">#334155</color>
+    <color name="text_muted">#64748B</color>
+    <color name="text_white">#FFFFFF</color>
+
+    <!-- Status -->
+    <color name="status_success">#10B981</color>
+    <color name="status_success_bg">#ECFDF5</color>
+    <color name="status_pending">#F59E0B</color>
+    <color name="status_pending_bg">#FFFBEB</color>
+    <color name="status_error">#EF4444</color>
+    <color name="status_error_bg">#FEF2F2</color>
+
+    <!-- Brand Pills -->
+    <color name="bkash_pink">#E2136E</color>
+    <color name="nagad_orange">#F7941D</color>
+    <color name="rocket_purple">#8C3494</color>
+    <color name="upay_navy">#004F9F</color>
+</resources>

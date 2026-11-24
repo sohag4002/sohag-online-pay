@@ -1,0 +1,76 @@
+name: Build Sohag Online Payment APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Signed Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
+      - name: Generate Production Signing Keystore
+        run: |
+          keytool -genkey -v -keystore app/release.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias sohag \
+            -storepass sohagonline123 \
+            -keypass sohagonline123 \
+            -dname "CN=Sohag Online Payment, OU=Payment, O=Sohag Online, L=Dhaka, C=BD"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Prepare APK Output
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk SohagOnlinePayment-v1.0.0.apk
+          ls -lh SohagOnlinePayment-v1.0.0.apk
+
+      - name: Upload APK Artifact (Direct Download Link)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SohagOnlinePayment-v1.0.0-APK
+          path: SohagOnlinePayment-v1.0.0.apk
+          retention-days: 90
+
+      - name: Create GitHub Release (Download Link)
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "Sohag Online Payment App v1.0.0"
+          draft: false
+          prerelease: false
+          files: SohagOnlinePayment-v1.0.0.apk
+          body: |
+            ### 📱 Sohag Online Payment Gateway Android App (v1.0.0)
+
+            **Features & Improvements:**
+            - ⚡ **High-Speed Instant Sync:** Incoming payment SMS from bKash, Nagad, Rocket, Upay, etc., are captured and sent to the server in milliseconds.
+            - 📷 **Zero-Hassle 1-Click QR Setup:** Scan the QR code directly from your merchant dashboard. No manual typing needed!
+            - 🔄 **24/7 Persistent Background Service:** Foreground service with sticky lifecycle.
+            - 🚀 **Auto-Start on Boot / Reboot:** Starts automatically when the phone powers on or restarts (`BOOT_COMPLETED`).
+            - 🧹 **Automatic 48-Hour Data Cleanup:** Keeps local database small, clean, and ensures lightning-fast app performance.
+            - 🎨 **Brand UI Design:** Custom styled with Sohag Online's official Navy Blue & Crimson Red colors.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

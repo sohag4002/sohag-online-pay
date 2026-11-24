@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Sohag Online Payment</string>
+    <string name="service_name">Sohag Online Payment Service</string>
+    <string name="notification_channel_name">Payment Service</string>
+    <string name="notification_channel_desc">Keeps payment SMS listener running in background</string>
+    <string name="service_active_title">⚡ সোয়েল/সোহাগ পেমেন্ট গেটওয়ে সক্রিয়</string>
+    <string name="service_active_desc">এসএমএস পর্যবেক্ষণ ও অটো সার্ভার সিঙ্ক চালু আছে</string>
+    <string name="status_connected">সক্রিয় • অটো রিডিং চালু</string>
+    <string name="status_disconnected">ডিসকানেক্টেড • সেটআপ করুন</string>
+    <string name="scan_qr">QR কোড স্ক্যান করুন</string>
+    <string name="scan_qr_desc">ড্যাশবোর্ড থেকে ১ ক্লিকে অটো কানেক্ট করতে স্ক্যান করুন</string>
+</resources>
