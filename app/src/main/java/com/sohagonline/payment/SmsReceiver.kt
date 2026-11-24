@@ -19,10 +19,13 @@ class SmsReceiver : BroadcastReceiver() {
         private const val TAG = "SmsReceiver"
         const val ACTION_REFRESH_UI = "com.sohagonline.payment.REFRESH_UI"
 
-        // Approved payment gateway addresses matching server whitelist in ApiController.php
+        // Approved payment gateway & bank addresses matching server whitelist in ApiController.php
         val PAYMENT_SENDERS = setOf(
             "bkash", "nagad", "16167", "16216", "upay", "16495",
-            "islami.bank", "tap", "09638900800", "01401195496", "mcash", "3737"
+            "islami.bank", "ibbl", "tap", "09638900800", "01401195496", "mcash", "3737",
+            "citybank", "city touch", "citytouch", "dbbl", "bracbank", "ebl",
+            "bankasia", "basic", "abbank", "agrani", "sonali", "jamunabank", "ific",
+            "ucb", "sebl", "primebank", "dhakabank"
         )
     }
 

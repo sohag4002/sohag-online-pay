@@ -152,30 +152,32 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
-                            android:orientation="horizontal">
+                            android:orientation="vertical">
 
-                            <Button
+                            <!-- Scan QR Code Button -->
+                            <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnScanQr"
-                                android:layout_width="0dp"
-                                android:layout_height="48dp"
-                                android:layout_marginEnd="6dp"
-                                android:layout_weight="1.2"
-                                android:background="@drawable/btn_accent"
-                                android:text="📷 QR কোড স্ক্যান করুন"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:text="📷  QR কোড স্ক্যান করুন (Auto Connect)"
                                 android:textColor="@color/text_white"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/accent_red"
+                                app:cornerRadius="12dp" />
 
-                            <Button
+                            <!-- Manual Setup Button -->
+                            <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnManualSetup"
-                                android:layout_width="0dp"
-                                android:layout_height="48dp"
-                                android:layout_marginStart="6dp"
-                                android:layout_weight="0.8"
-                                android:background="@drawable/btn_outline"
-                                android:text="ম্যানুয়াল"
-                                android:textColor="@color/primary_navy"
-                                android:textSize="13sp" />
+                                android:layout_width="match_parent"
+                                android:layout_height="50dp"
+                                android:layout_marginTop="8dp"
+                                android:text="⚙️  ডিভাইস কী (Key) দিয়ে ম্যানুয়াল কানেক্ট"
+                                android:textColor="@color/text_white"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/primary_navy"
+                                app:cornerRadius="12dp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -217,32 +219,36 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="12dp"
                             android:orientation="horizontal">
 
-                            <Button
+                            <!-- Battery Optimization Permission -->
+                            <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnIgnoreBattery"
                                 android:layout_width="0dp"
-                                android:layout_height="40dp"
+                                android:layout_height="48dp"
                                 android:layout_marginEnd="6dp"
                                 android:layout_weight="1"
-                                android:background="@drawable/card_rounded"
-                                android:backgroundTint="#B45309"
-                                android:text="ব্যাটারি পারমিশন"
+                                android:text="🔋 ব্যাটারি পারমিশন"
                                 android:textColor="@color/text_white"
-                                android:textSize="12sp" />
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                app:backgroundTint="#059669"
+                                app:cornerRadius="10dp" />
 
-                            <Button
+                            <!-- Auto-start Settings -->
+                            <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnAutoStartSettings"
                                 android:layout_width="0dp"
-                                android:layout_height="40dp"
+                                android:layout_height="48dp"
                                 android:layout_marginStart="6dp"
                                 android:layout_weight="1"
-                                android:background="@drawable/card_rounded"
-                                android:backgroundTint="@color/surface_white"
-                                android:text="অটো-স্টার্ট অন করুন"
-                                android:textColor="#B45309"
-                                android:textSize="12sp" />
+                                android:text="🚀 অটো-স্টার্ট অন"
+                                android:textColor="@color/text_white"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                app:backgroundTint="#D97706"
+                                app:cornerRadius="10dp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
