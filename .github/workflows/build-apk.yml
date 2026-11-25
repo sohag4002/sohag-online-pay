@@ -56,35 +56,36 @@ jobs:
 
       - name: Prepare APK Output
         run: |
-          cp app/build/outputs/apk/release/app-release.apk SohagOnlinePayment-v1.0.3.apk
-          ls -lh SohagOnlinePayment-v1.0.3.apk
+          cp app/build/outputs/apk/release/app-release.apk SohagOnlinePayment-v1.0.4.apk
+          ls -lh SohagOnlinePayment-v1.0.4.apk
 
       - name: Upload APK Artifact (Direct Download Link)
         uses: actions/upload-artifact@v4
         with:
-          name: SohagOnlinePayment-v1.0.3-APK
-          path: SohagOnlinePayment-v1.0.3.apk
+          name: SohagOnlinePayment-v1.0.4-APK
+          path: SohagOnlinePayment-v1.0.4.apk
           retention-days: 90
 
       - name: Create GitHub Release (Download Link)
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.3
-          name: "Sohag Online Payment App v1.0.3"
+          tag_name: v1.0.4
+          name: "Sohag Online Payment App v1.0.4"
           draft: false
           prerelease: false
-          files: SohagOnlinePayment-v1.0.3.apk
+          files: SohagOnlinePayment-v1.0.4.apk
           body: |
-            ### 📱 Sohag Online Payment Gateway Android App (v1.0.3)
+            ### 📱 Sohag Online Payment Gateway Android App (v1.0.4)
 
             **Features & Improvements:**
-            - ⚡ **High-Speed Instant Sync:** Incoming payment SMS from bKash, Nagad, Rocket, Upay, etc., are captured and sent to the server in milliseconds.
-            - 📷 **Zero-Hassle 1-Click QR Setup:** Scan the QR code directly from your merchant dashboard. No manual typing needed!
-            - 🔄 **24/7 Persistent Background Service:** Foreground service with sticky lifecycle.
-            - 🚀 **Auto-Start on Boot / Reboot:** Starts automatically when the phone powers on or restarts (`BOOT_COMPLETED`).
+            - 🚀 **Triple-Redundancy SMS Engine:** Combines BroadcastReceiver (Max Priority), ContentObserver (`Telephony.Sms.CONTENT_URI`), and periodic Inbox Scanning to ensure zero missed payment messages across ALL Android devices.
+            - 📱 **Universal OEM Support:** Fixes SMS broadcast delivery on Xiaomi (MIUI/HyperOS), Vivo, Oppo, Realme, Samsung, OnePlus, and Transsion (Tecno/Infinix) phones.
+            - ⚡ **Auto-WakeLock & goAsync:** Prevents phone CPU from sleeping during background network sync in Doze mode.
+            - 💳 **Complete Gateway Coverage:** Full support for bKash, Nagad, Rocket (16216), Upay, Cellfin, SureCash, OK Wallet, Tap, mCash, and all major Bangladeshi banks.
+            - 🛡️ **Duplicate Protection:** Intelligent multi-level deduplication prevents duplicate submissions to the server.
             - 🧹 **Automatic 48-Hour Data Cleanup:** Keeps local database small, clean, and ensures lightning-fast app performance.
-            - 🎨 **Brand UI Design:** Custom styled with Sohag Online's official Navy Blue & Crimson Red colors.
-            - 🛡️ **Lenient JSON & Network Resilience:** Robust handling of server responses.
+            - 📷 **Zero-Hassle 1-Click QR Setup:** Scan the QR code directly from your merchant dashboard.
+            - 🔄 **24/7 Persistent Background Service:** Foreground service with sticky lifecycle and auto-start on reboot.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

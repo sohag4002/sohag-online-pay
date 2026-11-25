@@ -196,6 +196,57 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- SMS PERMISSION WARNING CARD (Shows if READ_SMS or RECEIVE_SMS is missing) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSmsPermissionWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="#FEF2F2"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="#DC2626"
+                    app:strokeWidth="1.5dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🚨 এসএমএস রিড পারমিশন প্রয়োজন"
+                            android:textColor="#B91C1C"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="সব মোবাইলেই এসএমএস নিখুঁতভাবে রিড করার জন্য SMS পারমিশন চালু থাকা জরুরি। নিচের বাটনে চাপ দিয়ে পারমিশন Allow করুন:"
+                            android:textColor="#7F1D1D"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGrantSmsPermission"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center"
+                            android:text="📩  এসএমএস পারমিশন চালু করুন"
+                            android:textColor="@color/text_white"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="#DC2626"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- BATTERY & AUTO-START WARNING CARD (Shows only if needed) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardBatteryWarning"

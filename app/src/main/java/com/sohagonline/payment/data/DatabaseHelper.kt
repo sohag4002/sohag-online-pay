@@ -52,14 +52,32 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     fun insertSms(record: SmsRecord): Long {
         val db = writableDatabase
+        val cleanMsg = record.message.replace("\r\n", " ").replace("\n", " ").trim()
         val values = ContentValues().apply {
-            put(COL_ADDRESS, record.address)
-            put(COL_MESSAGE, record.message)
+            put(COL_ADDRESS, record.address.trim())
+            put(COL_MESSAGE, cleanMsg)
             put(COL_TIMESTAMP, record.timestamp)
             put(COL_STATUS, record.status)
             put(COL_RESPONSE, record.responseMessage)
         }
         return db.insert(TABLE_SMS, null, values)
+    }
+
+    /**
+     * Checks if an identical SMS from this sender was already processed in the last 2 hours
+     */
+    fun isSmsDuplicate(address: String, message: String): Boolean {
+        val db = readableDatabase
+        val cutoff = System.currentTimeMillis() - (2 * 3600 * 1000L)
+        val cleanMsg = message.replace("\r\n", " ").replace("\n", " ").trim()
+        val cleanAddr = address.trim()
+        val cursor = db.rawQuery(
+            "SELECT 1 FROM $TABLE_SMS WHERE $COL_ADDRESS = ? AND $COL_MESSAGE = ? AND $COL_TIMESTAMP > ? LIMIT 1",
+            arrayOf(cleanAddr, cleanMsg, cutoff.toString())
+        )
+        cursor.use {
+            return it.moveToFirst()
+        }
     }
 
     fun updateStatus(id: Long, status: String, responseMsg: String = "") {

@@ -1,5 +1,6 @@
 package com.sohagonline.payment
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -8,12 +9,19 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.database.ContentObserver
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Telephony
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -51,16 +59,28 @@ class PaymentForegroundService : Service() {
     private lateinit var prefs: AppPrefs
     private lateinit var apiClient: ApiClient
 
+    private var smsObserver: ContentObserver? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var wakeLock: PowerManager.WakeLock? = null
+
     private val retryRunnable = object : Runnable {
         override fun run() {
+            // 1. Scan SMS inbox in case any broadcast was missed or delayed
+            scanRecentInbox()
+
+            // 2. Process any pending queue
             processPendingQueue()
-            // Run 48-hour data cleanup every hour
+
+            // 3. Hourly 48-hour database purge
             if (System.currentTimeMillis() - prefs.lastCleanTime > 3600 * 1000L) {
                 db.purgeOldRecords(48)
                 prefs.lastCleanTime = System.currentTimeMillis()
             }
+
+            // 4. Update status notification
             updateNotification()
-            handler.postDelayed(this, 20_000L) // check every 20 seconds
+
+            handler.postDelayed(this, 15_000L) // Scan and retry every 15 seconds
         }
     }
 
@@ -71,8 +91,20 @@ class PaymentForegroundService : Service() {
         prefs = AppPrefs(this)
         apiClient = ApiClient.getInstance(this)
 
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        wakeLock = powerManager?.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "SohagOnline::PaymentServiceWakeLock"
+        )
+
         createNotificationChannel()
         startInForeground()
+
+        // Register ContentObserver to capture all SMS directly from the device SMS provider
+        registerSmsObserver()
+
+        // Register Network Callback to immediately sync when connectivity is restored
+        registerNetworkCallback()
 
         // Start background retry & cleanup loop
         handler.post(retryRunnable)
@@ -81,6 +113,10 @@ class PaymentForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "PaymentForegroundService onStartCommand")
         startInForeground()
+        // If observer is not registered (e.g. permission was granted later), try registering
+        if (smsObserver == null) {
+            registerSmsObserver()
+        }
         return START_STICKY
     }
 
@@ -126,7 +162,7 @@ class PaymentForegroundService : Service() {
         )
 
         val counts = if (::db.isInitialized) db.getCounts() else Triple(0, 0, 0)
-        val statusText = "সফল: ${counts.second} | পেন্ডিং: ${counts.third} • ৪৮ ঘণ্টার অটো ক্লিনার চালু"
+        val statusText = "সফল: ${counts.second} | পেন্ডিং: ${counts.third} • অটো সিঙ্ক ও রিডার সক্রিয়"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
@@ -149,6 +185,124 @@ class PaymentForegroundService : Service() {
         }
     }
 
+    /**
+     * Engine 2: Real-time SMS ContentObserver.
+     * Triggers whenever ANY SMS is written to the device SMS database (by RCS, Google Messages, OEM apps).
+     */
+    private fun registerSmsObserver() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "READ_SMS permission not granted; cannot register SmsObserver.")
+            return
+        }
+
+        try {
+            smsObserver = object : ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean, uri: Uri?) {
+                    super.onChange(selfChange, uri)
+                    Log.d(TAG, "SmsObserver detected SMS database change: $uri")
+                    scanRecentInbox()
+                }
+            }
+            contentResolver.registerContentObserver(
+                Telephony.Sms.CONTENT_URI,
+                true,
+                smsObserver!!
+            )
+            Log.i(TAG, "SmsObserver successfully registered on Telephony.Sms.CONTENT_URI")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register SmsObserver: ${e.message}")
+        }
+    }
+
+    /**
+     * Engine 3: Inbox Polling & Scanning.
+     * Scans the latest incoming SMS in the inbox (last 15 minutes) to guarantee zero missed messages.
+     */
+    fun scanRecentInbox() {
+        if (!prefs.isConfigured()) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+
+        executor.execute {
+            var foundNew = false
+            acquireWakeLock(15_000L)
+
+            try {
+                val fifteenMinutesAgo = System.currentTimeMillis() - (15 * 60 * 1000L)
+                val projection = arrayOf(
+                    Telephony.Sms._ID,
+                    Telephony.Sms.ADDRESS,
+                    Telephony.Sms.BODY,
+                    Telephony.Sms.DATE,
+                    Telephony.Sms.TYPE
+                )
+
+                val selection = "${Telephony.Sms.DATE} >= ? AND ${Telephony.Sms.TYPE} = ?"
+                val selectionArgs = arrayOf(fifteenMinutesAgo.toString(), Telephony.Sms.MESSAGE_TYPE_INBOX.toString())
+
+                contentResolver.query(
+                    Telephony.Sms.Inbox.CONTENT_URI,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    "${Telephony.Sms.DATE} DESC LIMIT 15"
+                )?.use { cursor ->
+                    val idxAddress = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
+                    val idxBody = cursor.getColumnIndex(Telephony.Sms.BODY)
+                    val idxDate = cursor.getColumnIndex(Telephony.Sms.DATE)
+
+                    while (cursor.moveToNext()) {
+                        val sender = if (idxAddress != -1) cursor.getString(idxAddress) else null
+                        val body = if (idxBody != -1) cursor.getString(idxBody) else null
+                        val date = if (idxDate != -1) cursor.getLong(idxDate) else System.currentTimeMillis()
+
+                        if (sender.isNullOrBlank() || body.isNullOrBlank()) continue
+
+                        val cleanSender = sender.trim()
+                        val cleanBody = body.trim()
+
+                        // Check if it's a payment SMS
+                        if (!SmsReceiver.isPaymentSms(cleanSender, cleanBody)) continue
+
+                        // Check if already stored in our database
+                        if (db.isSmsDuplicate(cleanSender, cleanBody)) continue
+
+                        Log.i(TAG, "Inbox Scanner detected new SMS from [$cleanSender]: $cleanBody")
+
+                        val record = SmsRecord(
+                            address = cleanSender,
+                            message = cleanBody,
+                            timestamp = date,
+                            status = SmsRecord.STATUS_PENDING
+                        )
+                        val insertedId = db.insertSms(record)
+                        foundNew = true
+
+                        // Immediately upload to server
+                        try {
+                            val response = apiClient.sendSms(cleanSender, cleanBody)
+                            if (response.isSuccess) {
+                                db.updateStatus(insertedId, SmsRecord.STATUS_SUCCESS, response.message)
+                            } else {
+                                db.updateStatus(insertedId, SmsRecord.STATUS_PENDING, response.message)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error sending inbox SMS #${insertedId}: ${e.message}")
+                            db.updateStatus(insertedId, SmsRecord.STATUS_PENDING, e.message ?: "Failed")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error scanning SMS inbox: ${e.message}", e)
+            } finally {
+                releaseWakeLock()
+            }
+
+            if (foundNew) {
+                sendBroadcast(Intent(SmsReceiver.ACTION_REFRESH_UI))
+            }
+        }
+    }
+
     private fun processPendingQueue() {
         if (!prefs.isConfigured()) return
 
@@ -157,19 +311,24 @@ class PaymentForegroundService : Service() {
             if (pendingList.isNotEmpty()) {
                 Log.d(TAG, "Processing ${pendingList.size} pending SMS...")
                 var changed = false
+                acquireWakeLock(20_000L)
 
-                for (sms in pendingList) {
-                    try {
-                        val response = apiClient.sendSms(sms.address, sms.message)
-                        if (response.isSuccess) {
-                            db.updateStatus(sms.id, SmsRecord.STATUS_SUCCESS, response.message)
-                            changed = true
-                        } else {
-                            db.updateStatus(sms.id, SmsRecord.STATUS_PENDING, response.message)
+                try {
+                    for (sms in pendingList) {
+                        try {
+                            val response = apiClient.sendSms(sms.address, sms.message)
+                            if (response.isSuccess) {
+                                db.updateStatus(sms.id, SmsRecord.STATUS_SUCCESS, response.message)
+                                changed = true
+                            } else {
+                                db.updateStatus(sms.id, SmsRecord.STATUS_PENDING, response.message)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to retry SMS #${sms.id}: ${e.message}")
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to retry SMS #${sms.id}: ${e.message}")
                     }
+                } finally {
+                    releaseWakeLock()
                 }
 
                 if (changed) {
@@ -177,6 +336,43 @@ class PaymentForegroundService : Service() {
                 }
             }
         }
+    }
+
+    private fun registerNetworkCallback() {
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                networkCallback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        super.onAvailable(network)
+                        Log.d(TAG, "Internet connectivity restored! Triggering immediate sync & scan...")
+                        processPendingQueue()
+                        scanRecentInbox()
+                    }
+                }
+                cm?.registerDefaultNetworkCallback(networkCallback!!)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register network callback: ${e.message}")
+        }
+    }
+
+    private fun acquireWakeLock(timeoutMs: Long) {
+        try {
+            if (wakeLock?.isHeld == false) {
+                wakeLock?.acquire(timeoutMs)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not acquire wake lock: ${e.message}")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (_: Exception) {}
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -203,6 +399,21 @@ class PaymentForegroundService : Service() {
         super.onDestroy()
         Log.w(TAG, "PaymentForegroundService onDestroy. Restarting...")
         handler.removeCallbacks(retryRunnable)
+
+        try {
+            if (smsObserver != null) {
+                contentResolver.unregisterContentObserver(smsObserver!!)
+            }
+        } catch (_: Exception) {}
+
+        try {
+            if (networkCallback != null) {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                cm?.unregisterNetworkCallback(networkCallback!!)
+            }
+        } catch (_: Exception) {}
+
+        releaseWakeLock()
 
         // Resurrect service
         startService(applicationContext)

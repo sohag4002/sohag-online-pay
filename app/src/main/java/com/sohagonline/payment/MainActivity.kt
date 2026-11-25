@@ -76,6 +76,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        updatePermissionCardVisibility()
         updateBatteryCardVisibility()
         loadDashboardData()
         val filter = IntentFilter(SmsReceiver.ACTION_REFRESH_UI)
@@ -115,6 +116,11 @@ class MainActivity : AppCompatActivity() {
         // Manual Settings Dialog
         binding.btnSettings.setOnClickListener { showSettingsDialog() }
         binding.btnManualSetup.setOnClickListener { showSettingsDialog() }
+
+        // SMS Permission Request
+        binding.btnGrantSmsPermission.setOnClickListener {
+            requestSmsPermissions()
+        }
 
         // Battery Optimization
         binding.btnIgnoreBattery.setOnClickListener {
@@ -180,6 +186,16 @@ class MainActivity : AppCompatActivity() {
             binding.tvStatusText.text = getString(R.string.status_disconnected)
             binding.cardQuickSetup.visibility = View.VISIBLE
         }
+    }
+
+    private fun hasSmsPermission(): Boolean {
+        val receiveGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        val readGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        return receiveGranted && readGranted
+    }
+
+    private fun updatePermissionCardVisibility() {
+        binding.cardSmsPermissionWarning.visibility = if (hasSmsPermission()) View.GONE else View.VISIBLE
     }
 
     private fun updateBatteryCardVisibility() {
@@ -332,23 +348,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissions() {
-        val permissionsToRequest = mutableListOf<String>()
+        if (!hasSmsPermission()) {
+            requestSmsPermissions()
+        }
+    }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.RECEIVE_SMS)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.READ_SMS)
-        }
+    private fun requestSmsPermissions() {
+        val permissions = mutableListOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
 
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 101)
+        val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECEIVE_SMS) ||
+                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)
+
+        if (!hasSmsPermission() && !shouldShowRationale && prefs.isConnected) {
+            // Already denied before, take user to app settings
+            try {
+                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(intent)
+                Toast.makeText(this, "Permissions মেনু থেকে SMS পারমিশন চালু করুন", Toast.LENGTH_LONG).show()
+                return
+            } catch (_: Exception) {}
         }
+
+        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 101)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -361,9 +390,12 @@ class MainActivity : AppCompatActivity() {
                     break
                 }
             }
+            updatePermissionCardVisibility()
             if (allGranted) {
-                Toast.makeText(this, "এসএমএস পর্যবেক্ষণ পারমিশন অনুমোদিত হয়েছে", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "এসএমএস পর্যবেক্ষণ পারমিশন সক্রিয় হয়েছে", Toast.LENGTH_SHORT).show()
                 PaymentForegroundService.startService(this)
+            } else {
+                Toast.makeText(this, "এসএমএস স্বয়ংক্রিয় রিড করতে পারমিশন প্রয়োজন", Toast.LENGTH_LONG).show()
             }
         }
     }

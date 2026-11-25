@@ -66,12 +66,11 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- High-priority SMS Broadcast Receiver -->
+        <!-- High-priority SMS Broadcast Receiver (Max priority, accessible on all device ROMs) -->
         <receiver
             android:name=".SmsReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter android:priority="999">
+            android:exported="true">
+            <intent-filter android:priority="2147483647">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
